@@ -25,7 +25,7 @@ The training source of truth is the raw dataset at [players_18.csv](./FootballAn
 Install the main dependencies:
 
 ```bash
-pip install pandas numpy scikit-learn joblib matplotlib seaborn jupyterlab
+pip install -r requirements.txt
 ```
 
 ## Jupyter Lab Workflow
