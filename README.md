@@ -1,73 +1,83 @@
 # Football Analysis ML Project
 
 ## Overview
-This project analyzes football player data from FIFA 18 to extract insights and build machine learning models. The dataset contains attributes of professional football players including skills, physical attributes, and performance metrics. Through data analysis and machine learning techniques, this project aims to provide valuable insights for player scouting, team formation, and performance prediction.
+This project analyzes FIFA 18 player data and now includes a reproducible machine learning pipeline for:
 
-## Dataset
-- Source: FIFA 18 Player Dataset
-- Files:
-  - `players_18.csv`: Raw dataset containing player attributes and statistics
-  - `players_18_processed.csv`: Cleaned and preprocessed data ready for analysis
-  - `players_18_processed_classification.csv`: Data prepared for classification tasks and model training
+- `role` classification: `attack`, `midfield`, `defense`, `goalkeeper`
+- `position` classification: merged exact primary positions such as `CB`, `ST`, `CM`, `GK`
 
-## Features
-- **Data Preprocessing**: Cleaning, normalization, and feature engineering of player data
-- **Exploratory Data Analysis**: Statistical analysis and visualization of player attributes
-- **Machine Learning Models**: Development of predictive models for player performance
-- **Player Classification**: Categorization of players based on their attributes and positions
-- **Performance Metrics**: Evaluation of model accuracy and effectiveness
+The training source of truth is the raw dataset at [players_18.csv](./FootballAnalysisML/players_18.csv). The older processed CSV files are kept as legacy artifacts for comparison only.
 
-## Notebooks
-- `Dataset Analysis.ipynb`: Contains exploratory data analysis, data visualization, and model development
+## What Changed
+- Replaced the notebook-only training flow with a reusable `scikit-learn` package.
+- Removed the hard dependency on `paralytics`.
+- Made labels deterministic by deriving targets from the first listed player position instead of using randomness.
+- Added train/evaluate CLIs and smoke tests.
 
-## Setup
+## Project Layout
+- [football_analysis](./football_analysis): reusable preprocessing, training, and evaluation code
+- [FootballAnalysisML/players_18.csv](./FootballAnalysisML/players_18.csv): raw dataset
+- [FootballAnalysisML/Dataset Analysis.ipynb](./FootballAnalysisML/Dataset%20Analysis.ipynb): lightweight EDA and artifact-consumer notebook
+- [FootballAnalysisML/Dataset Analysis .ipynb](./FootballAnalysisML/Dataset%20Analysis%20.ipynb): legacy notebook kept for reference
+- [tests](./tests): reproducibility and smoke tests
 
-### Prerequisites
-- Python 3.x
-- Jupyter Notebook
-- Required Python libraries (install via pip):
-  ```
-  pip install pandas numpy matplotlib seaborn scikit-learn jupyter
-  ```
+## Requirements
+Install the main dependencies:
 
-### Installation
-1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/FootballAnalysisML.git
-   cd FootballAnalysisML
-   ```
-2. Install the required dependencies as mentioned above
-3. Launch Jupyter Notebook:
-   ```
-   jupyter notebook
-   ```
+```bash
+pip install pandas numpy scikit-learn joblib jupyter
+```
 
-## Usage
-1. Open the `Dataset Analysis.ipynb` notebook in Jupyter
-2. Run the cells sequentially to reproduce the analysis
-3. Modify parameters or models as needed for custom analysis
-4. Use the processed datasets for your own machine learning experiments
+## Training
+Train the 4-role classifier:
 
-## Results
-The analysis provides insights into:
-- Key attributes that determine player value and performance
-- Correlation between different player skills
-- Predictive models for player classification and performance estimation
-- Visualization of player distributions across different positions and attributes
+```bash
+python -m football_analysis.train_role
+```
 
-## Future Work
-- Implement more advanced ML models (deep learning, ensemble methods)
-- Add player recommendation system for team formation optimization
-- Develop interactive visualizations for better data exploration
-- Incorporate time-series analysis for player development tracking
-- Create a web application for interactive analysis
+Train the exact-position classifier:
 
-## Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
+```bash
+python -m football_analysis.train_position
+```
 
-## License
-MIT License
+Both commands write artifacts under `artifacts/`.
 
-## Acknowledgements
-- FIFA 18 dataset providers
-- Contributors to the Python data science ecosystem
+Useful options:
+
+```bash
+python -m football_analysis.train_role --search-iterations 4 --cv-folds 5
+python -m football_analysis.train_position --search-iterations 4 --cv-folds 5
+python -m football_analysis.train_role --sample-size 1000 --search-iterations 1 --cv-folds 2
+```
+
+## Evaluation
+Evaluate a saved role model:
+
+```bash
+python -m football_analysis.evaluate --task role
+```
+
+Evaluate a saved position model:
+
+```bash
+python -m football_analysis.evaluate --task position
+```
+
+This recomputes metrics from the saved artifact and raw CSV, then writes `evaluation.json` beside the model.
+
+## Tests
+Run the included checks:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+The test suite verifies:
+
+- deterministic target generation
+- numeric preprocessing output before model fit
+- end-to-end smoke training for both tasks
+
+## Notebook
+Open [FootballAnalysisML/Dataset Analysis.ipynb](./FootballAnalysisML/Dataset%20Analysis.ipynb) for lightweight EDA and artifact inspection. The heavy training logic now lives in the package instead of the notebook.
