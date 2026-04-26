@@ -9,15 +9,15 @@ This project analyzes FIFA 18 player data and now includes a reproducible machin
 The training source of truth is the raw dataset at [players_18.csv](./FootballAnalysisML/players_18.csv). The older processed CSV files are kept as legacy artifacts for comparison only.
 
 ## What Changed
-- Replaced the notebook-only training flow with a reusable `scikit-learn` package.
+- Replaced the fragile notebook-only training flow with a reusable `scikit-learn` package that also powers the main Jupyter notebook.
 - Removed the hard dependency on `paralytics`.
 - Made labels deterministic by deriving targets from the first listed player position instead of using randomness.
 - Added train/evaluate CLIs and smoke tests.
 
 ## Project Layout
-- [football_analysis](./football_analysis): reusable preprocessing, training, and evaluation code
+- [football_analysis](./football_analysis): reusable preprocessing, training, and evaluation code used by the notebook and CLI
 - [FootballAnalysisML/players_18.csv](./FootballAnalysisML/players_18.csv): raw dataset
-- [FootballAnalysisML/Dataset Analysis.ipynb](./FootballAnalysisML/Dataset%20Analysis.ipynb): lightweight EDA and artifact-consumer notebook
+- [FootballAnalysisML/Dataset Analysis.ipynb](./FootballAnalysisML/Dataset%20Analysis.ipynb): main end-to-end Jupyter Lab notebook to run cell by cell
 - [FootballAnalysisML/Dataset Analysis .ipynb](./FootballAnalysisML/Dataset%20Analysis%20.ipynb): legacy notebook kept for reference
 - [tests](./tests): reproducibility and smoke tests
 
@@ -25,17 +25,38 @@ The training source of truth is the raw dataset at [players_18.csv](./FootballAn
 Install the main dependencies:
 
 ```bash
-pip install pandas numpy scikit-learn joblib jupyter
+pip install pandas numpy scikit-learn joblib matplotlib seaborn jupyterlab
 ```
 
-## Training
-Train the 4-role classifier:
+## Jupyter Lab Workflow
+From the project root, start Jupyter Lab:
+
+```bash
+jupyter lab
+```
+
+Then open:
+
+- [FootballAnalysisML/Dataset Analysis.ipynb](./FootballAnalysisML/Dataset%20Analysis.ipynb)
+
+This notebook is the main workflow now. It includes:
+
+- dataset exploration
+- the same style of graphs shown in the old notebook
+- role-model training
+- exact-position-model training
+- confusion matrices and metric summaries
+
+Run the notebook from top to bottom, cell by cell.
+
+## Optional CLI Training
+Train the 4-role classifier from the terminal:
 
 ```bash
 python -m football_analysis.train_role
 ```
 
-Train the exact-position classifier:
+Train the exact-position classifier from the terminal:
 
 ```bash
 python -m football_analysis.train_position
@@ -80,4 +101,4 @@ The test suite verifies:
 - end-to-end smoke training for both tasks
 
 ## Notebook
-Open [FootballAnalysisML/Dataset Analysis.ipynb](./FootballAnalysisML/Dataset%20Analysis.ipynb) for lightweight EDA and artifact inspection. The heavy training logic now lives in the package instead of the notebook.
+Use [FootballAnalysisML/Dataset Analysis.ipynb](./FootballAnalysisML/Dataset%20Analysis.ipynb) as the primary notebook. The Python package remains in the repo to keep the training pipeline deterministic and reusable, but the notebook is now the intended Jupyter Lab interface.
