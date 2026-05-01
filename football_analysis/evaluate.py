@@ -20,11 +20,18 @@ def main() -> None:
     artifact_dir = args.artifact_dir / args.task
     metrics = evaluate_saved_model(args.task, artifact_dir, args.data_path)
     line = (
-        f"{args.task} accuracy={metrics['accuracy']:.4f} "
-        f"macro_f1={metrics['macro_f1']:.4f}"
+        f"{args.task} preset={metrics.get('evaluation_protocol', {}).get('search_preset_saved_in_artifact')} "
+        f"n_test={metrics['test_rows']} "
+        f"acc={metrics['accuracy']:.4f} balanced_acc={metrics['balanced_accuracy']:.4f} "
+        f"kappa={metrics['cohen_kappa']:.4f} macro_f1={metrics['macro_f1']:.4f} "
+        f"w_f1={metrics['weighted_f1']:.4f} log_loss={metrics.get('log_loss', float('nan')):.4f}"
     )
-    if "top_3_accuracy" in metrics:
+    if metrics.get("top_3_accuracy") is not None:
         line += f" top_3={metrics['top_3_accuracy']:.4f}"
+        if metrics.get("top_5_accuracy") is not None:
+            line += f" top_5={metrics['top_5_accuracy']:.4f}"
+        if metrics.get("top_10_accuracy") is not None:
+            line += f" top_10={metrics['top_10_accuracy']:.4f}"
     print(line)
 
 
