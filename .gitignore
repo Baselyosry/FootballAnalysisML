@@ -1,5 +1,12 @@
-artifacts/
 __pycache__/
+
+# Ephemeral unittest output — never commit
+artifacts/test_role_smoke/
+artifacts/test_position_smoke/
+artifacts/test_position_paper_smoke/
+
+# Serialized sklearn pipelines exceed GitHub ~100 MB/file cap — scores stay in *.json
+artifacts/**/*.joblib
 *.pyc
 .pytest_cache/
 tmp*/
