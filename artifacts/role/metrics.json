@@ -1,0 +1,125 @@
+{
+  "accuracy": 0.9011417432470064,
+  "macro_f1": 0.9126141500380561,
+  "weighted_f1": 0.9006912226510037,
+  "labels": [
+    "attack",
+    "defense",
+    "goalkeeper",
+    "midfield"
+  ],
+  "classification_report": {
+    "attack": {
+      "precision": 0.882258064516129,
+      "recall": 0.8176382660687593,
+      "f1-score": 0.8487199379363848,
+      "support": 669.0
+    },
+    "defense": {
+      "precision": 0.9164578111946533,
+      "recall": 0.9448751076658053,
+      "f1-score": 0.9304495335029687,
+      "support": 1161.0
+    },
+    "goalkeeper": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 404.0
+    },
+    "midfield": {
+      "precision": 0.8671532846715329,
+      "recall": 0.8754605747973471,
+      "f1-score": 0.8712871287128713,
+      "support": 1357.0
+    },
+    "accuracy": 0.9011417432470064,
+    "macro avg": {
+      "precision": 0.9164672900955788,
+      "recall": 0.9094934871329778,
+      "f1-score": 0.9126141500380561,
+      "support": 3591.0
+    },
+    "weighted avg": {
+      "precision": 0.9008535703863974,
+      "recall": 0.9011417432470064,
+      "f1-score": 0.9006912226510037,
+      "support": 3591.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      547,
+      4,
+      0,
+      118
+    ],
+    [
+      0,
+      1097,
+      0,
+      64
+    ],
+    [
+      0,
+      0,
+      404,
+      0
+    ],
+    [
+      73,
+      96,
+      0,
+      1188
+    ]
+  ],
+  "task": "role",
+  "target_column": "role_target",
+  "random_state": 15,
+  "test_size": 0.2,
+  "cv_folds": 5,
+  "search_iterations": 8,
+  "search_cv_n_jobs": -1,
+  "best_model_name": "random_forest",
+  "best_cv_score": 0.9106409147713611,
+  "best_params": {
+    "model__n_estimators": 400,
+    "model__min_samples_split": 5,
+    "model__min_samples_leaf": 2,
+    "model__max_features": 0.5,
+    "model__max_depth": 15,
+    "model__class_weight": "balanced"
+  },
+  "candidate_results": [
+    {
+      "model_name": "random_forest",
+      "best_cv_score": 0.9106409147713611,
+      "best_params": {
+        "model__n_estimators": 400,
+        "model__min_samples_split": 5,
+        "model__min_samples_leaf": 2,
+        "model__max_features": 0.5,
+        "model__max_depth": 15,
+        "model__class_weight": "balanced"
+      }
+    },
+    {
+      "model_name": "extra_trees",
+      "best_cv_score": 0.9105961444853363,
+      "best_params": {
+        "model__n_estimators": 300,
+        "model__min_samples_split": 10,
+        "model__min_samples_leaf": 4,
+        "model__max_features": 0.5,
+        "model__max_depth": 15,
+        "model__class_weight": "balanced"
+      }
+    }
+  ],
+  "train_rows": 14363,
+  "test_rows": 3591,
+  "legacy_baseline": {
+    "accuracy": 0.6535783904204957,
+    "macro_f1": 0.7007852089319504
+  }
+}
