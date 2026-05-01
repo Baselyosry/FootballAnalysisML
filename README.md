@@ -20,6 +20,7 @@ The training source of truth is the raw dataset at [players_18.csv](./FootballAn
 - [FootballAnalysisML/Dataset Analysis.ipynb](./FootballAnalysisML/Dataset%20Analysis.ipynb): main end-to-end Jupyter Lab notebook to run cell by cell
 - [FootballAnalysisML/Dataset Analysis .ipynb](./FootballAnalysisML/Dataset%20Analysis%20.ipynb): legacy notebook kept for reference
 - [tests](./tests): reproducibility and smoke tests
+- [artifacts](./artifacts): **`metrics.json` / `evaluation.json`** checked in so teammates see scored runs without training — large **`*.joblib`** models stay gitignored (see [artifacts/README.md](./artifacts/README.md))
 
 ## Research-level documentation (`paper`)
 

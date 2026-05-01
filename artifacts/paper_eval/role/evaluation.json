@@ -1,0 +1,102 @@
+{
+  "accuracy": 0.9053188526872737,
+  "balanced_accuracy": 0.9101757041787197,
+  "macro_f1": 0.9156585392843127,
+  "weighted_f1": 0.9049104721890697,
+  "cohen_kappa": 0.8650442590366759,
+  "labels": [
+    "attack",
+    "defense",
+    "goalkeeper",
+    "midfield"
+  ],
+  "classification_report": {
+    "attack": {
+      "precision": 0.9025210084033614,
+      "recall": 0.8026905829596412,
+      "f1-score": 0.8496835443037974,
+      "support": 669.0
+    },
+    "defense": {
+      "precision": 0.9285106382978724,
+      "recall": 0.9397071490094746,
+      "f1-score": 0.9340753424657534,
+      "support": 1161.0
+    },
+    "goalkeeper": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 404.0
+    },
+    "midfield": {
+      "precision": 0.8602681721947777,
+      "recall": 0.8983050847457628,
+      "f1-score": 0.8788752703677001,
+      "support": 1357.0
+    },
+    "accuracy": 0.9053188526872737,
+    "macro avg": {
+      "precision": 0.9228249547240028,
+      "recall": 0.9101757041787197,
+      "f1-score": 0.9156585392843127,
+      "support": 3591.0
+    },
+    "weighted avg": {
+      "precision": 0.9059235074781377,
+      "recall": 0.9053188526872737,
+      "f1-score": 0.9049104721890697,
+      "support": 3591.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      537,
+      4,
+      0,
+      128
+    ],
+    [
+      0,
+      1091,
+      0,
+      70
+    ],
+    [
+      0,
+      0,
+      404,
+      0
+    ],
+    [
+      58,
+      80,
+      0,
+      1219
+    ]
+  ],
+  "confusion_matrix_labels": [
+    "attack",
+    "defense",
+    "goalkeeper",
+    "midfield"
+  ],
+  "log_loss": 0.25189150756656986,
+  "task": "role",
+  "model_name": "extra_trees",
+  "test_rows": 3591,
+  "evaluation_protocol": {
+    "evaluation_name": "holdout_repeat",
+    "description": "Re-evaluate the estimator on the identical rows indexed at training time (artifact['test_indices']). Indices refer to positions in `build_model_frame(load_raw_data())[...]` row order.",
+    "data_csv_path_resolved": "/Users/philosopher/MUST SEMESTER 7,8/NN/FootballAnalysisML/FootballAnalysisML/players_18.csv",
+    "stored_test_indices_count": 3591,
+    "label_order_in_metrics": [
+      "attack",
+      "defense",
+      "goalkeeper",
+      "midfield"
+    ],
+    "search_preset_saved_in_artifact": "paper",
+    "parity_requirement_for_identical_numbers": "Training must use the same raw CSV rows in the same order; missing-indicator columns derive from whichever rows remain after dropping unmapped targets \u2014 only then are indices comparable."
+  }
+}
