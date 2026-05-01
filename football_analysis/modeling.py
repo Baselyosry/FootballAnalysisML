@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import joblib
 import numpy as np
@@ -12,9 +13,12 @@ from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import (
     accuracy_score,
+    balanced_accuracy_score,
     classification_report,
+    cohen_kappa_score,
     confusion_matrix,
     f1_score,
+    log_loss,
     top_k_accuracy_score,
 )
 from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold, train_test_split
@@ -42,29 +46,76 @@ def build_preprocessor(
     )
 
 
-def model_candidates(random_state: int) -> list[tuple[str, Any, dict[str, list[Any]]]]:
+def model_candidates(
+    random_state: int,
+    task: str,
+    search_preset: Literal["fast", "paper"] = "fast",
+) -> list[tuple[str, Any, dict[str, list[Any]]]]:
+    """Hyperparameter grids. `paper` expands position search toward the same richness as role (incl. max_depth=None).
+
+    Trees keep `n_jobs=1`; CV parallelizes folds via RandomizedSearchCV `n_jobs`.
+    """
+    rf = RandomForestClassifier(random_state=random_state, n_jobs=1)
+    et = ExtraTreesClassifier(random_state=random_state, n_jobs=1)
+
+    rf_estimators = (
+        [200, 300, 400, 500, 600]
+        if search_preset == "paper"
+        else [200, 300, 400, 500]
+    )
+
+    rf_full = (
+        rf,
+        {
+            "model__n_estimators": rf_estimators,
+            "model__max_depth": [None, 15, 25, 40],
+            "model__min_samples_split": [2, 5, 10],
+            "model__min_samples_leaf": [1, 2, 4],
+            "model__max_features": ["sqrt", "log2", 0.5],
+            "model__class_weight": [None, "balanced", "balanced_subsample"],
+        },
+    )
+    et_full = (
+        et,
+        {
+            "model__n_estimators": rf_estimators,
+            "model__max_depth": [None, 15, 25, 40],
+            "model__min_samples_split": [2, 5, 10],
+            "model__min_samples_leaf": [1, 2, 4],
+            "model__max_features": ["sqrt", "log2", 0.5],
+            "model__class_weight": [None, "balanced"],
+        },
+    )
+
+    if task == "role":
+        return [("random_forest", *rf_full), ("extra_trees", *et_full)]
+
+    # position task
+    if search_preset == "paper":
+        return [("random_forest", *rf_full), ("extra_trees", *et_full)]
+
     return [
         (
             "random_forest",
-            RandomForestClassifier(random_state=random_state, n_jobs=1),
+            rf,
             {
-                "model__n_estimators": [200, 300, 400, 500],
-                "model__max_depth": [None, 15, 25, 40],
-                "model__min_samples_split": [2, 5, 10],
-                "model__min_samples_leaf": [1, 2, 4],
-                "model__max_features": ["sqrt", "log2", 0.5],
-                "model__class_weight": [None, "balanced", "balanced_subsample"],
+                "model__n_estimators": [120, 200, 300],
+                "model__max_depth": [18, 28, 40],
+                "model__min_samples_split": [2, 6],
+                "model__min_samples_leaf": [1, 3],
+                "model__max_features": ["sqrt", "log2"],
+                "model__class_weight": [None, "balanced"],
             },
         ),
         (
             "extra_trees",
-            ExtraTreesClassifier(random_state=random_state, n_jobs=1),
+            et,
             {
-                "model__n_estimators": [200, 300, 400, 500],
-                "model__max_depth": [None, 15, 25, 40],
-                "model__min_samples_split": [2, 5, 10],
-                "model__min_samples_leaf": [1, 2, 4],
-                "model__max_features": ["sqrt", "log2", 0.5],
+                "model__n_estimators": [120, 200, 300],
+                "model__max_depth": [18, 28, 40],
+                "model__min_samples_split": [2, 6],
+                "model__min_samples_leaf": [1, 3],
+                "model__max_features": ["sqrt", "log2"],
                 "model__class_weight": [None, "balanced"],
             },
         ),
@@ -94,11 +145,14 @@ def compute_metrics(
 ) -> dict[str, Any]:
     y_pred = estimator.predict(X_test)
     labels = np.arange(len(label_encoder.classes_))
+    n_classes = len(labels)
 
     metrics: dict[str, Any] = {
         "accuracy": float(accuracy_score(y_test, y_pred)),
+        "balanced_accuracy": float(balanced_accuracy_score(y_test, y_pred)),
         "macro_f1": float(f1_score(y_test, y_pred, average="macro")),
         "weighted_f1": float(f1_score(y_test, y_pred, average="weighted")),
+        "cohen_kappa": float(cohen_kappa_score(y_test, y_pred)),
         "labels": label_encoder.classes_.tolist(),
         "classification_report": classification_report(
             y_test,
@@ -109,15 +163,33 @@ def compute_metrics(
             zero_division=0,
         ),
         "confusion_matrix": confusion_matrix(y_test, y_pred, labels=labels).tolist(),
+        "confusion_matrix_labels": label_encoder.classes_.tolist(),
     }
 
-    if task == "position" and hasattr(estimator, "predict_proba"):
-        y_score = estimator.predict_proba(X_test)
-        metrics["top_3_accuracy"] = float(
-            top_k_accuracy_score(y_test, y_score, k=3, labels=labels)
+    if hasattr(estimator, "predict_proba"):
+        probas = estimator.predict_proba(X_test)
+        eps = 1e-15
+        probas = np.clip(probas, eps, 1.0 - eps)
+        metrics["log_loss"] = float(
+            log_loss(y_test, probas, labels=labels)
         )
+        if task == "position":
+            for k in (3, 5, 10):
+                if k <= n_classes:
+                    metrics[f"top_{k}_accuracy"] = float(
+                        top_k_accuracy_score(y_test, probas, k=k, labels=labels)
+                    )
 
     return metrics
+
+
+def _effective_cv_jobs(requested: int) -> int:
+    """Prefer parallel CV folds; unittest / single-core envs can set FOOTBALL_ANALYSIS_CV_JOBS=1."""
+    if requested == -1:
+        env = os.environ.get("FOOTBALL_ANALYSIS_CV_JOBS", "").strip()
+        if env.isdigit():
+            return int(env)
+    return requested
 
 
 def train_best_model(
@@ -131,11 +203,14 @@ def train_best_model(
     test_size: float,
     search_iterations: int,
     cv_folds: int,
+    search_cv_n_jobs: int = -1,
+    search_preset: Literal["fast", "paper"] = "fast",
 ) -> dict[str, Any]:
     X = frame[numeric_features + categorical_features].copy()
     y_raw = frame[target_col].copy()
     label_encoder = LabelEncoder()
     y = label_encoder.fit_transform(y_raw)
+    cv_jobs = _effective_cv_jobs(search_cv_n_jobs)
 
     row_ids = np.arange(len(frame))
     X_train, X_test, y_train, y_test, row_train, row_test = train_test_split(
@@ -147,29 +222,45 @@ def train_best_model(
         stratify=y,
     )
 
-    preprocessor = build_preprocessor(numeric_features, categorical_features)
+    print(
+        f"[{task}] preset={search_preset} train_rows={len(X_train)} "
+        f"test_rows={len(X_test)} n_classes={len(label_encoder.classes_)} "
+        f"(search: {search_iterations} iters × {cv_folds} folds, CV n_jobs={cv_jobs})",
+        flush=True,
+    )
+
     cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
 
     best_name = ""
     best_search: RandomizedSearchCV | None = None
     candidate_results: list[dict[str, Any]] = []
 
-    for name, estimator, params in model_candidates(random_state):
+    for name, estimator, params in model_candidates(
+        random_state, task, search_preset
+    ):
+        # Fresh preprocessor avoids sharing fitted state across candidate pipelines.
+        preprocessor = build_preprocessor(numeric_features, categorical_features)
         pipeline = Pipeline(
             [("preprocessor", preprocessor), ("model", estimator)]
         )
+        print(f"[{task}] RandomizedSearchCV: {name} …", flush=True)
+        search_verbose = int(os.environ.get("FOOTBALL_ANALYSIS_SEARCH_VERBOSE", "1"))
         search = RandomizedSearchCV(
             estimator=pipeline,
             param_distributions=params,
             n_iter=search_iterations,
             scoring="f1_macro",
-            n_jobs=1,
+            n_jobs=cv_jobs,
             cv=cv,
             refit=True,
             random_state=random_state,
-            verbose=0,
+            verbose=search_verbose,
         )
         search.fit(X_train, y_train)
+        print(
+            f"[{task}] {name} done — best_cv_macro_f1={search.best_score_:.4f}",
+            flush=True,
+        )
         candidate_results.append(
             {
                 "model_name": name,
@@ -193,6 +284,8 @@ def train_best_model(
             "test_size": test_size,
             "cv_folds": cv_folds,
             "search_iterations": search_iterations,
+            "search_preset": search_preset,
+            "search_cv_n_jobs": cv_jobs,
             "best_model_name": best_name,
             "best_cv_score": float(best_search.best_score_),
             "best_params": best_search.best_params_,
@@ -212,6 +305,7 @@ def train_best_model(
         "random_state": random_state,
         "test_size": test_size,
         "model_name": best_name,
+        "search_preset": search_preset,
         "estimator": best_search.best_estimator_,
     }
 
