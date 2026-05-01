@@ -21,6 +21,12 @@ The training source of truth is the raw dataset at [players_18.csv](./FootballAn
 - [FootballAnalysisML/Dataset Analysis .ipynb](./FootballAnalysisML/Dataset%20Analysis%20.ipynb): legacy notebook kept for reference
 - [tests](./tests): reproducibility and smoke tests
 
+## Research-level documentation (`paper`)
+
+- **`RESEARCH_METHODOLOGY_AND_METRICS.md`** — full labeling logic, formulas for every exported metric (`accuracy`, balanced accuracy, Cohen’s κ, macro/weighted F1, log-loss, top-*k*, confusion matrix layout), tuning grids, reproducibility checklist.
+- **`PROJECT_EVALUATION_REPORT.md`** — executive summary plus latest **`paper`** bundle numbers (`artifacts/paper_eval/`).
+- **Maximum tuning:** `--preset paper` on `train_role` / `train_position` (heavy; see docs).
+
 ## Requirements
 Install the main dependencies:
 
@@ -64,12 +70,17 @@ python -m football_analysis.train_position
 
 Both commands write artifacts under `artifacts/`.
 
+**Defaults (`--preset fast`).** Role uses **8** randomized trials × **5** CV folds; position uses **5** × **3**. **`--preset paper`** expands grids and bumps defaults to **28 × 5** each (heavy; manuscript-grade). **`--preset paper`** also gives position the rich tree grid (including `max_depth=None`). **`--cv-jobs -1`** parallelizes CV folds. Quiet sklearn: `FOOTBALL_ANALYSIS_SEARCH_VERBOSE=0`. Full metric & methods write-up → [RESEARCH_METHODOLOGY_AND_METRICS.md](./RESEARCH_METHODOLOGY_AND_METRICS.md); summary numbers → [PROJECT_EVALUATION_REPORT.md](./PROJECT_EVALUATION_REPORT.md).
+
 Useful options:
 
 ```bash
+python -m football_analysis.train_role --preset paper
+python -m football_analysis.train_position --preset paper
 python -m football_analysis.train_role --search-iterations 4 --cv-folds 5
-python -m football_analysis.train_position --search-iterations 4 --cv-folds 5
+python -m football_analysis.train_position --search-iterations 5 --cv-folds 3
 python -m football_analysis.train_role --sample-size 1000 --search-iterations 1 --cv-folds 2
+python -m football_analysis.train_position --cv-jobs 1   # serial folds (easier debugging)
 ```
 
 ## Evaluation
