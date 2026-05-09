@@ -344,3 +344,28 @@ FOOTBALL_ANALYSIS_SEARCH_VERBOSE=0 python3 -m football_analysis.train_position \
 - Accuracy ≈ **0.654**, macro-F1 ≈ **0.701**.
 
 (Full decimals, confusion matrix, classification report JSON, hyperparameters ⇒ open `artifacts/paper_eval/*/metrics.json` and `evaluation.json`.)
+
+---
+
+## 12. Neural-network extension (`--backend torch`)
+
+The repository now includes an optional PyTorch tabular model for both tasks:
+
+- command path: `python -m football_analysis.train_role --backend torch` and `python -m football_analysis.train_position --backend torch`
+- implementation: `football_analysis/nn_tabular.py`
+- architecture: numeric branch (median imputation + standardization on train split), categorical branch (learned embeddings), then MLP head (`Linear -> BatchNorm -> ReLU -> Dropout`)
+- optimization: `AdamW`, early stopping by validation macro-F1, deterministic seeds (`numpy` + `torch`)
+- class imbalance: weighted cross-entropy for `position`
+
+### 12.1 Artifact format and parity
+
+- torch training writes `model.pt` and `metrics.json` under task output directory
+- `metrics.json` keeps the same core fields used by sklearn path (`accuracy`, `balanced_accuracy`, `macro_f1`, `weighted_f1`, `cohen_kappa`, `log_loss`, confusion matrix, and top-k for `position`)
+- `python -m football_analysis.evaluate --task <task>` auto-detects `model.pt`; pass `--backend torch` or `--backend sklearn` to force backend
+
+### 12.2 Suggested comparison protocol for manuscript tables
+
+1. Train sklearn baseline (`--backend sklearn`, default).
+2. Train neural model with the same random seed and `--sample-size` policy.
+3. Compare `metrics.json` side-by-side for each task.
+4. Report both strict metrics (accuracy, macro-F1) and position ambiguity metrics (top-3/top-5 accuracy).

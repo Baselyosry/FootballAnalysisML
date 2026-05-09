@@ -10,6 +10,7 @@ The training source of truth is the raw dataset at [players_18.csv](./FootballAn
 
 ## What Changed
 - Replaced the fragile notebook-only training flow with a reusable `scikit-learn` package that also powers the main Jupyter notebook.
+- Added an optional PyTorch tabular neural-network backend (`--backend torch`) with embeddings, early stopping, and weighted loss for imbalanced position prediction.
 - Removed the hard dependency on `paralytics`.
 - Made labels deterministic by deriving targets from the first listed player position instead of using randomness.
 - Added train/evaluate CLIs and smoke tests.
@@ -71,7 +72,19 @@ python -m football_analysis.train_position
 
 Both commands write artifacts under `artifacts/`.
 
-**Defaults (`--preset fast`).** Role uses **8** randomized trials × **5** CV folds; position uses **5** × **3**. **`--preset paper`** expands grids and bumps defaults to **28 × 5** each (heavy; manuscript-grade). **`--preset paper`** also gives position the rich tree grid (including `max_depth=None`). **`--cv-jobs -1`** parallelizes CV folds. Quiet sklearn: `FOOTBALL_ANALYSIS_SEARCH_VERBOSE=0`. Full metric & methods write-up → [RESEARCH_METHODOLOGY_AND_METRICS.md](./RESEARCH_METHODOLOGY_AND_METRICS.md); summary numbers → [PROJECT_EVALUATION_REPORT.md](./PROJECT_EVALUATION_REPORT.md).
+**Defaults (`--preset fast`, sklearn backend).** Role uses **8** randomized trials × **5** CV folds; position uses **5** × **3**. **`--preset paper`** expands grids and bumps defaults to **28 × 5** each (heavy; manuscript-grade). **`--preset paper`** also gives position the rich tree grid (including `max_depth=None`). **`--cv-jobs -1`** parallelizes CV folds. Quiet sklearn: `FOOTBALL_ANALYSIS_SEARCH_VERBOSE=0`. Full metric & methods write-up → [RESEARCH_METHODOLOGY_AND_METRICS.md](./RESEARCH_METHODOLOGY_AND_METRICS.md); summary numbers → [PROJECT_EVALUATION_REPORT.md](./PROJECT_EVALUATION_REPORT.md).
+
+### Neural-network training (PyTorch)
+
+Use `--backend torch` on the same role/position CLIs to train a tabular neural network:
+
+```bash
+python -m football_analysis.train_role --backend torch
+python -m football_analysis.train_position --backend torch
+python -m football_analysis.train_position --backend torch --torch-epochs 80 --torch-patience 12
+```
+
+Torch artifacts are saved as `model.pt` in the selected output directory; tree artifacts remain `model.joblib`.
 
 Useful options:
 
@@ -82,6 +95,7 @@ python -m football_analysis.train_role --search-iterations 4 --cv-folds 5
 python -m football_analysis.train_position --search-iterations 5 --cv-folds 3
 python -m football_analysis.train_role --sample-size 1000 --search-iterations 1 --cv-folds 2
 python -m football_analysis.train_position --cv-jobs 1   # serial folds (easier debugging)
+python -m football_analysis.train_role --backend torch --torch-epochs 45 --torch-batch-size 256
 ```
 
 ## Evaluation
@@ -97,7 +111,12 @@ Evaluate a saved position model:
 python -m football_analysis.evaluate --task position
 ```
 
-This recomputes metrics from the saved artifact and raw CSV, then writes `evaluation.json` beside the model.
+This recomputes metrics from the saved artifact and raw CSV, then writes `evaluation.json` beside the model. `evaluate` auto-detects backend (`model.pt` for torch, otherwise `model.joblib`), or you can force it:
+
+```bash
+python -m football_analysis.evaluate --task role --backend torch
+python -m football_analysis.evaluate --task role --backend sklearn
+```
 
 ## Tests
 Run the included checks:
