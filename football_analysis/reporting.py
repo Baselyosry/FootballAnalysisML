@@ -1,38 +1,52 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
 from .data import DEFAULT_DATA_PATH, build_model_frame, load_raw_data
-from .modeling import compute_metrics, load_artifact, save_json
+from .modeling import compute_metrics, compute_metrics_from_outputs, load_artifact, save_json
 
 
 def evaluate_saved_model(
     task: str,
     artifact_dir: Path,
     data_path: Path | str | None = None,
+    backend: Literal["auto", "sklearn", "torch"] = "auto",
 ) -> dict[str, Any]:
     data_path_resolved = DEFAULT_DATA_PATH if data_path is None else Path(data_path)
-    artifact = load_artifact(artifact_dir / "model.joblib")
     raw_data = load_raw_data(data_path)
     frame, _, _, target_col = build_model_frame(raw_data, task)
-    test_frame = frame.iloc[artifact["test_indices"]].copy()
+    resolved_backend = backend
+    if resolved_backend == "auto":
+        resolved_backend = "torch" if (artifact_dir / "model.pt").exists() else "sklearn"
 
+    if resolved_backend == "torch":
+        from .nn_tabular import load_torch_artifact, predict_torch_artifact
+
+        artifact = load_torch_artifact(artifact_dir / "model.pt")
+    else:
+        artifact = load_artifact(artifact_dir / "model.joblib")
+
+    test_frame = frame.iloc[artifact["test_indices"]].copy()
     X_test = test_frame[artifact["numeric_features"] + artifact["categorical_features"]]
     label_encoder = LabelEncoder()
     label_encoder.fit(artifact["label_classes"])
     y_test = label_encoder.transform(test_frame[target_col])
 
-    metrics = compute_metrics(
-        artifact["estimator"],
-        X_test,
-        y_test,
-        label_encoder,
-        task,
-    )
+    if resolved_backend == "torch":
+        y_pred, probas = predict_torch_artifact(artifact, X_test)
+        metrics = compute_metrics_from_outputs(y_test, y_pred, probas, label_encoder, task)
+    else:
+        metrics = compute_metrics(
+            artifact["estimator"],
+            X_test,
+            y_test,
+            label_encoder,
+            task,
+        )
     protocol: dict[str, Any] = {
         "evaluation_name": "holdout_repeat",
         "description": (
@@ -46,6 +60,7 @@ def evaluate_saved_model(
         "search_preset_saved_in_artifact": artifact.get(
             "search_preset", artifact.get("search_preset_at_train", "unknown")
         ),
+        "backend": resolved_backend,
         "parity_requirement_for_identical_numbers": (
             "Training must use the same raw CSV rows in the same order; "
             "missing-indicator columns derive from whichever rows remain after dropping "
@@ -56,7 +71,8 @@ def evaluate_saved_model(
     metrics.update(
         {
             "task": task,
-            "model_name": artifact["model_name"],
+            "model_name": artifact.get("model_name", "unknown"),
+            "backend": resolved_backend,
             "test_rows": int(len(test_frame)),
             "evaluation_protocol": protocol,
         }

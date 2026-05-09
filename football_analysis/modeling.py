@@ -136,14 +136,13 @@ def save_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, default=_json_default), encoding="utf-8")
 
 
-def compute_metrics(
-    estimator: Pipeline,
-    X_test: pd.DataFrame,
+def compute_metrics_from_outputs(
     y_test: np.ndarray,
+    y_pred: np.ndarray,
+    probas: np.ndarray | None,
     label_encoder: LabelEncoder,
     task: str,
 ) -> dict[str, Any]:
-    y_pred = estimator.predict(X_test)
     labels = np.arange(len(label_encoder.classes_))
     n_classes = len(labels)
 
@@ -166,13 +165,10 @@ def compute_metrics(
         "confusion_matrix_labels": label_encoder.classes_.tolist(),
     }
 
-    if hasattr(estimator, "predict_proba"):
-        probas = estimator.predict_proba(X_test)
+    if probas is not None:
         eps = 1e-15
         probas = np.clip(probas, eps, 1.0 - eps)
-        metrics["log_loss"] = float(
-            log_loss(y_test, probas, labels=labels)
-        )
+        metrics["log_loss"] = float(log_loss(y_test, probas, labels=labels))
         if task == "position":
             for k in (3, 5, 10):
                 if k <= n_classes:
@@ -181,6 +177,18 @@ def compute_metrics(
                     )
 
     return metrics
+
+
+def compute_metrics(
+    estimator: Pipeline,
+    X_test: pd.DataFrame,
+    y_test: np.ndarray,
+    label_encoder: LabelEncoder,
+    task: str,
+) -> dict[str, Any]:
+    y_pred = estimator.predict(X_test)
+    probas = estimator.predict_proba(X_test) if hasattr(estimator, "predict_proba") else None
+    return compute_metrics_from_outputs(y_test, y_pred, probas, label_encoder, task)
 
 
 def _effective_cv_jobs(requested: int) -> int:
